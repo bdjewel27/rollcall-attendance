@@ -248,8 +248,44 @@ async function addStudent(e) {
 }
 
 async function removeStudent(id) {
+  await purgeStudentFromAttendance(id);
   if (db) await db.collection('students').doc(id).delete();
   else { students = students.filter(s => s.id !== id); renderAll(); }
+}
+
+/** Strips a removed student's entry out of every attendance session that
+ * recorded them, recomputing that session's counts — otherwise the
+ * session keeps an orphaned id and its counts stop matching the roster.
+ * A session left with no records after the removal is dropped entirely. */
+async function purgeStudentFromAttendance(studentId) {
+  const affected = attendanceSessions.filter(a => a.records && studentId in a.records);
+
+  for (const session of affected) {
+    const records = { ...session.records };
+    delete records[studentId];
+
+    const counts = { present: 0, absent: 0, late: 0 };
+    Object.values(records).forEach(v => counts[v]++);
+
+    const stillHasRecords = Object.keys(records).length > 0;
+
+    if (db) {
+      const ref = db.collection('attendance_sessions').doc(session.id);
+      if (stillHasRecords) {
+        // update() merges nested objects rather than replacing them, so a
+        // deleted key would silently survive — set() replaces the document.
+        const { id: _id, ...rest } = session;
+        await ref.set({ ...rest, records, counts });
+      } else {
+        await ref.delete();
+      }
+    } else if (stillHasRecords) {
+      session.records = records;
+      session.counts = counts;
+    } else {
+      attendanceSessions = attendanceSessions.filter(a => a.id !== session.id);
+    }
+  }
 }
 
 /* ==========================================================================
