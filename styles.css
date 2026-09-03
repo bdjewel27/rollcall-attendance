@@ -215,7 +215,8 @@ footer a{color:var(--ink-faint);text-decoration:none;margin-left:16px;}
 :root[data-theme="dark"] .seg button.p.on{background:#0f2e1e;color:#4ade80;}
 :root[data-theme="dark"] .seg button.a.on{background:#3a1414;color:#f87171;}
 :root[data-theme="dark"] .seg button.l.on{background:#3a2a0d;color:#fbbf24;}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--bg);padding:13px 20px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.2);z-index:50;}
+.toast-stack{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:50;}
+.toast{background:var(--ink);color:var(--bg);padding:13px 20px;border-radius:11px;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,.2);}
 .empty-state{text-align:center;padding:30px 10px;color:var(--ink-faint);font-size:13.5px;}
 
 @media (max-width:1180px){.grid3{grid-template-columns:1fr;}.stats{grid-template-columns:repeat(2,1fr);}}

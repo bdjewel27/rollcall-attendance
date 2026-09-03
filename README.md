@@ -5,16 +5,20 @@ management, taking attendance per class, a live dashboard, and reports.
 
 ## Files
 
-- `index.html` — page structure (login screen + app shell, all six views)
+- `index.html` — page shell: loads React, ReactDOM, Babel-standalone (for
+  in-browser JSX) and Chart.js, then mounts `app.jsx` into `#root`
 - `styles.css` — layout, color tokens, light/dark theme
-- `app.js` — state, login, navigation, CRUD, attendance flow, chart rendering
+- `app.jsx` — React components: login, sidebar/topbar, all six views,
+  db-backed state via the `useCollection` hook, chart rendering
 
 ## Data
 
-Reads and writes go through `window.claude.use('db')`, a realtime document
-store provided when this page runs as a published Claude Artifact. Outside
-that environment `db` resolves to `null` and the app falls back to
-in-memory state for the current tab only — see `initDb()` in `app.js`.
+Each collection (`teachers`, `classes`, `students`, `attendance_sessions`,
+`announcements`) is subscribed with `useCollection`, which wraps
+`window.claude.use('db')` and re-renders on every snapshot — including
+right after login, since it's plain React state rather than a manual
+DOM update. Outside a published Claude Artifact `db` resolves to `null`
+and reads/writes are skipped; see `App()` in `app.jsx`.
 
 ## Demo credentials
 
