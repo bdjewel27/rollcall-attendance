@@ -68,6 +68,10 @@ function enterApp() {
   document.getElementById('appRoot').hidden = false;
   applySessionChrome();
   showView('dashboard');
+  // Data usually finishes loading from the db before login (renderAll()
+  // no-ops with no session yet), and nothing else re-triggers it once
+  // logged in unless the data changes again — so render explicitly here.
+  renderAll();
 }
 
 function logout() {
