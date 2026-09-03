@@ -134,6 +134,14 @@ function toast(msg) {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2600);
 }
+/** Sorts students by roll number (numeric when possible), falling back
+ * to name so rows without a roll still land somewhere stable. */
+function byRollThenName(a, b) {
+  const ra = Number(a.roll), rb = Number(b.roll);
+  if (!Number.isNaN(ra) && !Number.isNaN(rb) && ra !== rb) return ra - rb;
+  return a.name.localeCompare(b.name);
+}
+
 /** Loose match key so "Class 10"/"A" and "class 10 "/"a" resolve to the
  * same class instead of silently forking into two rosters — used only to
  * find-or-create a class; every other lookup uses its stable `id`. */
@@ -232,13 +240,17 @@ async function removeTeacher(id) {
    ========================================================================== */
 async function addStudent(e) {
   e.preventDefault();
+  const errEl = document.getElementById('stuErr');
+  errEl.hidden = true;
+
   const name = document.getElementById('stuName').value.trim();
+  const roll = document.getElementById('stuRoll').value.trim();
   const cls = document.getElementById('stuClass').value.trim();
   const section = document.getElementById('stuSection').value.trim();
-  if (!name || !cls || !section) return false;
+  if (!name || !roll || !cls || !section) return false;
 
   const classId = await findOrCreateClassId(cls, section);
-  const doc = { name, class: cls, section, classId, createdAt: Date.now() };
+  const doc = { name, roll, class: cls, section, classId, createdAt: Date.now() };
   if (db) await db.collection('students').add(doc);
   else { students.push({ id: 'local' + Date.now(), ...doc }); renderAll(); }
 
@@ -335,7 +347,7 @@ function renderAttendanceRoll() {
   const classId = document.getElementById('attClassSel').value;
   const wrap = document.getElementById('attRollWrap');
   const emptyEl = document.getElementById('attRollEmpty');
-  const roster = students.filter(s => s.classId === classId);
+  const roster = students.filter(s => s.classId === classId).sort(byRollThenName);
 
   currentMarks = {};
   if (!roster.length) {
@@ -345,10 +357,10 @@ function renderAttendanceRoll() {
   }
   emptyEl.hidden = true;
 
-  wrap.innerHTML = roster.map((s, i) => {
+  wrap.innerHTML = roster.map(s => {
     currentMarks[s.id] = 'present';
     return `<div class="roll-row">
-      <div class="roll-idx">${i + 1}</div>
+      <div class="roll-idx">${escapeHtml(s.roll ?? '—')}</div>
       <div class="mini-avatar" style="background:${colorFor(s.id)}">${initials(s.name)}</div>
       <div><div class="roll-name">${escapeHtml(s.name)}</div><div class="roll-meta">${escapeHtml(s.class)} - ${escapeHtml(s.section)}</div></div>
       <div class="seg" data-sid="${s.id}">
@@ -557,8 +569,10 @@ function renderTeacherTable() {
 function renderStudentTable() {
   const tbody = document.getElementById('studentTbody');
   document.getElementById('studentEmpty').hidden = students.length > 0;
-  tbody.innerHTML = students.map(s => `
-    <tr><td><div class="person"><div class="mini-avatar" style="background:${colorFor(s.id)}">${initials(s.name)}</div>${escapeHtml(s.name)}</div></td>
+  const sorted = [...students].sort(byRollThenName);
+  tbody.innerHTML = sorted.map(s => `
+    <tr><td class="mono">${escapeHtml(s.roll ?? '—')}</td>
+    <td><div class="person"><div class="mini-avatar" style="background:${colorFor(s.id)}">${initials(s.name)}</div>${escapeHtml(s.name)}</div></td>
     <td class="mono">${s.id.slice(0, 8)}</td><td>${escapeHtml(s.class)}</td><td>${escapeHtml(s.section)}</td>
     <td>${session.role === 'admin' ? `<button class="btn-ghost" onclick="removeStudent('${s.id}')">Remove</button>` : ''}</td></tr>`).join('');
 }

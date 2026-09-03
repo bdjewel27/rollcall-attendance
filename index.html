@@ -179,14 +179,16 @@
             <div class="card-head"><div class="card-title">Add Student</div></div>
             <form onsubmit="return addStudent(event)">
               <div class="field"><label>Full name</label><input id="stuName" required placeholder="e.g. Nadia Karim"></div>
+              <div class="field"><label>Roll</label><input id="stuRoll" required type="number" min="1" step="1" placeholder="e.g. 12"></div>
               <div class="field"><label>Class</label><input id="stuClass" required placeholder="e.g. Class 10"></div>
               <div class="field"><label>Section</label><input id="stuSection" required placeholder="e.g. A"></div>
+              <div id="stuErr" class="login-err" hidden></div>
               <button class="btn-primary" type="submit">Add Student</button>
             </form>
           </div>
           <div class="table-card">
             <div class="card-head"><div class="card-title">All Students</div></div>
-            <div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>ID</th><th>Class</th><th>Section</th><th></th></tr></thead><tbody id="studentTbody"></tbody></table></div>
+            <div style="overflow-x:auto;"><table><thead><tr><th>Roll</th><th>Name</th><th>ID</th><th>Class</th><th>Section</th><th></th></tr></thead><tbody id="studentTbody"></tbody></table></div>
             <div id="studentEmpty" class="empty-state" hidden>No students yet — add the first one.</div>
           </div>
         </div>
