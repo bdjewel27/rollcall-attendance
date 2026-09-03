@@ -36,6 +36,7 @@
       <button type="submit" class="btn-primary">Sign In</button>
     </form>
     <div class="login-hint">Demo credentials — Admin PIN <b class="mono">2026</b>. Teacher PIN is set when a teacher is added (default <b class="mono">1234</b>).</div>
+    <div class="security-note">⚠ Demo-only security: PINs are stored in plain text and anyone with this page's link can read them. Don't reuse a real password here, and don't use this login as-is for sensitive records.</div>
   </div>
 </div>
 
@@ -164,6 +165,7 @@
           </div>
           <div class="table-card">
             <div class="card-head"><div class="card-title">All Teachers</div></div>
+            <div class="security-note">⚠ PINs below are stored in plain text and visible to anyone with this page's link.</div>
             <div style="overflow-x:auto;"><table><thead><tr><th>Name</th><th>ID</th><th>Subject</th><th>PIN</th><th></th></tr></thead><tbody id="teacherTbody"></tbody></table></div>
             <div id="teacherEmpty" class="empty-state" hidden>No teachers yet — add the first one.</div>
           </div>
