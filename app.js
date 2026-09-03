@@ -259,10 +259,17 @@ async function addStudent(e) {
     return false;
   }
 
-  const classId = await findOrCreateClassId(cls, section);
-  const doc = { name, roll, class: cls, section, classId, createdAt: Date.now() };
-  if (db) await db.collection('students').add(doc);
-  else { students.push({ id: 'local' + Date.now(), ...doc }); renderAll(); }
+  try {
+    const classId = await findOrCreateClassId(cls, section);
+    const doc = { name, roll, class: cls, section, classId, createdAt: Date.now() };
+    if (db) await db.collection('students').add(doc);
+    else { students.push({ id: 'local' + Date.now(), ...doc }); renderAll(); }
+  } catch (err) {
+    console.error('addStudent failed:', err);
+    errEl.textContent = `Couldn't save the student (${err?.code || err?.message || 'unknown error'}). Try again.`;
+    errEl.hidden = false;
+    return false;
+  }
 
   e.target.reset();
   toast('Student added');
