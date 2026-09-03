@@ -3,7 +3,7 @@
    ========================================================================== */
 let db = null;
 let session = null; // {role:'admin'|'teacher', name, id}
-let teachers = [], students = [], attendanceSessions = [], announcements = [];
+let teachers = [], students = [], classes = [], attendanceSessions = [], announcements = [];
 
 const CLASS_ICONS = ['#2563eb', '#ef4444', '#f59e0b', '#22c55e', '#8b5cf6'];
 const todayISO = () => new Date(2026, 8, 3).toISOString().slice(0, 10);
@@ -134,8 +134,30 @@ function toast(msg) {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 2600);
 }
-function classKey(cls, section) {
-  return (cls + '-' + section).toLowerCase().replace(/\s+/g, '');
+/** Loose match key so "Class 10"/"A" and "class 10 "/"a" resolve to the
+ * same class instead of silently forking into two rosters — used only to
+ * find-or-create a class; every other lookup uses its stable `id`. */
+function classMatchKey(cls, section) {
+  return (cls.trim() + '|' + section.trim()).toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Returns the id of the class matching (cls, section), creating it in
+ * the `classes` collection on first use. Students and attendance
+ * sessions reference this id rather than re-deriving identity from text. */
+async function findOrCreateClassId(cls, section) {
+  const key = classMatchKey(cls, section);
+  const existing = classes.find(c => classMatchKey(c.name, c.section) === key);
+  if (existing) return existing.id;
+
+  const doc = { name: cls.trim(), section: section.trim(), createdAt: Date.now() };
+  if (db) {
+    const ref = await db.collection('classes').add(doc);
+    classes.push({ id: ref.id, ...doc });
+    return ref.id;
+  }
+  const id = 'local' + Date.now();
+  classes.push({ id, ...doc });
+  return id;
 }
 
 /* ==========================================================================
@@ -155,6 +177,11 @@ async function initDb() {
 
   db.collection('teachers').onSnapshot(snap => {
     teachers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAll();
+  }, () => { statusEl.textContent = 'sync error'; });
+
+  db.collection('classes').onSnapshot(snap => {
+    classes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderAll();
   }, () => { statusEl.textContent = 'sync error'; });
 
@@ -210,7 +237,8 @@ async function addStudent(e) {
   const section = document.getElementById('stuSection').value.trim();
   if (!name || !cls || !section) return false;
 
-  const doc = { name, class: cls, section, createdAt: Date.now() };
+  const classId = await findOrCreateClassId(cls, section);
+  const doc = { name, class: cls, section, classId, createdAt: Date.now() };
   if (db) await db.collection('students').add(doc);
   else { students.push({ id: 'local' + Date.now(), ...doc }); renderAll(); }
 
@@ -249,7 +277,7 @@ let currentMarks = {}; // studentId -> 'present' | 'absent' | 'late'
 
 function classOptions() {
   const set = new Map();
-  students.forEach(s => set.set(classKey(s.class, s.section), `${s.class} - ${s.section}`));
+  classes.forEach(c => set.set(c.id, `${c.name} - ${c.section}`));
   return set;
 }
 
@@ -268,10 +296,10 @@ function refreshClassSelect() {
 
 function renderAttendanceRoll() {
   refreshClassSelect();
-  const key = document.getElementById('attClassSel').value;
+  const classId = document.getElementById('attClassSel').value;
   const wrap = document.getElementById('attRollWrap');
   const emptyEl = document.getElementById('attRollEmpty');
-  const roster = students.filter(s => classKey(s.class, s.section) === key);
+  const roster = students.filter(s => s.classId === classId);
 
   currentMarks = {};
   if (!roster.length) {
@@ -311,11 +339,11 @@ function markAll(mark) {
 }
 
 async function saveAttendance() {
-  const key = document.getElementById('attClassSel').value;
+  const classId = document.getElementById('attClassSel').value;
   const date = document.getElementById('attDate').value || todayISO();
-  if (!key) { toast('Add students to a class first'); return; }
+  if (!classId) { toast('Add students to a class first'); return; }
 
-  const roster = students.filter(s => classKey(s.class, s.section) === key);
+  const roster = students.filter(s => s.classId === classId);
   if (!roster.length) return;
 
   const label = `${roster[0].class} - ${roster[0].section}`;
@@ -326,12 +354,12 @@ async function saveAttendance() {
   Object.values(records).forEach(v => counts[v]++);
 
   const doc = {
-    date, class: label, classKey: key, records, counts,
+    date, class: label, classId, records, counts,
     takenBy: session.name,
     time: new Date(2026, 8, 3).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     savedAt: Date.now(),
   };
-  const docId = date + '_' + key;
+  const docId = date + '_' + classId;
 
   if (db) {
     await db.collection('attendance_sessions').doc(docId).set(doc);
@@ -471,11 +499,11 @@ function renderTodaysClasses() {
   }
 
   const todaysSessions = attendanceSessions.filter(a => a.date === todayISO());
-  list.innerHTML = opts.slice(0, 5).map(([k, label], i) => {
-    const done = todaysSessions.some(a => a.classKey === k);
+  list.innerHTML = opts.slice(0, 5).map(([classId, label], i) => {
+    const done = todaysSessions.some(a => a.classId === classId);
     return `<div class="class-row">
       <div class="class-icon" style="background:${CLASS_ICONS[i % CLASS_ICONS.length]}"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M9 3v18M4 8h5M4 16h5M15 12h5"/></svg></div>
-      <div><div class="class-name">${escapeHtml(label)}</div><div class="class-meta">${students.filter(s => classKey(s.class, s.section) === k).length} students</div></div>
+      <div><div class="class-name">${escapeHtml(label)}</div><div class="class-meta">${students.filter(s => s.classId === classId).length} students</div></div>
       <span class="status-chip ${done ? 'done' : 'upcoming'}">${done ? 'Taken' : 'Pending'}</span>
     </div>`;
   }).join('');
