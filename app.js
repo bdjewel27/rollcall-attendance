@@ -216,14 +216,24 @@ async function initDb() {
    ========================================================================== */
 async function addTeacher(e) {
   e.preventDefault();
+  const errEl = document.getElementById('tchErr');
+  errEl.hidden = true;
+
   const name = document.getElementById('tchName').value.trim();
   const subject = document.getElementById('tchSubject').value.trim();
   const pin = document.getElementById('tchPin').value.trim();
   if (!name || !subject || !pin) return false;
 
-  const doc = { name, subject, pin, createdAt: Date.now() };
-  if (db) await db.collection('teachers').add(doc);
-  else { teachers.push({ id: 'local' + Date.now(), ...doc }); renderAll(); }
+  try {
+    const doc = { name, subject, pin, createdAt: Date.now() };
+    if (db) await db.collection('teachers').add(doc);
+    else { teachers.push({ id: 'local' + Date.now(), ...doc }); renderAll(); }
+  } catch (err) {
+    console.error('addTeacher failed:', err);
+    errEl.textContent = `Couldn't save the teacher (${err?.code || err?.message || 'unknown error'}). Try again.`;
+    errEl.hidden = false;
+    return false;
+  }
 
   e.target.reset();
   toast('Teacher added');
@@ -231,8 +241,14 @@ async function addTeacher(e) {
 }
 
 async function removeTeacher(id) {
-  if (db) await db.collection('teachers').doc(id).delete();
-  else { teachers = teachers.filter(t => t.id !== id); renderAll(); }
+  try {
+    if (db) await db.collection('teachers').doc(id).delete();
+    else { teachers = teachers.filter(t => t.id !== id); renderAll(); }
+    toast('Teacher removed');
+  } catch (err) {
+    console.error('removeTeacher failed:', err);
+    toast(`Couldn't remove teacher (${err?.code || err?.message || 'unknown error'})`);
+  }
 }
 
 /* ==========================================================================
@@ -277,9 +293,15 @@ async function addStudent(e) {
 }
 
 async function removeStudent(id) {
-  await purgeStudentFromAttendance(id);
-  if (db) await db.collection('students').doc(id).delete();
-  else { students = students.filter(s => s.id !== id); renderAll(); }
+  try {
+    await purgeStudentFromAttendance(id);
+    if (db) await db.collection('students').doc(id).delete();
+    else { students = students.filter(s => s.id !== id); renderAll(); }
+    toast('Student removed');
+  } catch (err) {
+    console.error('removeStudent failed:', err);
+    toast(`Couldn't remove student (${err?.code || err?.message || 'unknown error'})`);
+  }
 }
 
 /** Strips a removed student's entry out of every attendance session that
