@@ -249,6 +249,16 @@ async function addStudent(e) {
   const section = document.getElementById('stuSection').value.trim();
   if (!name || !roll || !cls || !section) return false;
 
+  // Check against an existing class before creating one, so a rejected
+  // duplicate never leaves behind a class doc nobody asked for.
+  const existingClass = classes.find(c => classMatchKey(c.name, c.section) === classMatchKey(cls, section));
+  const rosterSoFar = existingClass ? students.filter(s => s.classId === existingClass.id) : [];
+  if (rosterSoFar.some(s => String(s.roll) === roll)) {
+    errEl.textContent = `Roll ${roll} is already used in ${cls} - ${section}.`;
+    errEl.hidden = false;
+    return false;
+  }
+
   const classId = await findOrCreateClassId(cls, section);
   const doc = { name, roll, class: cls, section, classId, createdAt: Date.now() };
   if (db) await db.collection('students').add(doc);
