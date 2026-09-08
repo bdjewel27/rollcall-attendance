@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AttendSmart — Register</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="logo">📚</div>
+      <h2>Create Account</h2>
+      <p class="sub">Register as Admin or Teacher</p>
+
+      <div id="msgBox" class="msg"></div>
+
+      <form id="regForm">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="fullName" placeholder="Your name" required />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="role">
+            <option value="admin">Admin</option>
+            <option value="teacher">Teacher</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="password" placeholder="Minimum 6 characters" minlength="6" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="regBtn">Create Account</button>
+      </form>
+
+      <p class="login-foot">Already have an account? <a href="index.html">Sign In</a></p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script>
+    const form = document.getElementById("regForm");
+    const msgBox = document.getElementById("msgBox");
+    const btn = document.getElementById("regBtn");
+
+    function showMsg(text, type) {
+      msgBox.textContent = text;
+      msgBox.className = "msg " + type;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      btn.disabled = true;
+      btn.textContent = "Creating account...";
+
+      const fullName = document.getElementById("fullName").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const role = document.getElementById("role").value;
+      const password = document.getElementById("password").value;
+
+      const { data, error } = await supabase.auth.signUp({ email, password });
+
+      if (error) {
+        showMsg(error.message, "error");
+        btn.disabled = false;
+        btn.textContent = "Create Account";
+        return;
+      }
+
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert([{ id: data.user.id, full_name: fullName, email, role }]);
+
+        if (profileError) {
+          showMsg(profileError.message, "error");
+          btn.disabled = false;
+          btn.textContent = "Create Account";
+          return;
+        }
+      }
+
+      showMsg("Account created! Check your email to confirm, then sign in.", "success");
+      setTimeout(() => (window.location.href = "index.html"), 1800);
+    });
+  </script>
+</body>
+</html>
