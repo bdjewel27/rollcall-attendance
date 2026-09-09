@@ -46,3 +46,25 @@ The local repository Git identity is configured as:
 - Name: `bdjewel27`
 - Email: `bdjewel27@users.noreply.github.com`
 
+### React rebuild and deployment
+
+User requested that the project use React instead of raw JavaScript.
+
+- Restored the React 19 + Vite frontend under `src/`.
+- Removed the legacy page-level `js/` source and stale compiled `static/` files.
+- Added a Vite source entry at `src/index.html`.
+- Configured Vite to build from the React source and output to `dist/`.
+- Added a GitHub Actions workflow to build and deploy the React app to GitHub Pages.
+- Verified the production build succeeds.
+
+The live application is available at:
+
+https://bdjewel27.github.io/rollcall-attendance/
+
+The latest React deployment fix was committed as:
+
+https://github.com/bdjewel27/rollcall-attendance/commit/e82cd05
+
+### Chat log export
+
+User requested that this chat log be pushed to GitHub. This file is maintained as the project conversation history.
